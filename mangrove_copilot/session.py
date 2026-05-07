@@ -25,7 +25,7 @@ def run_session(
     Any of `repo`, `console`, or `voice` may be supplied for testing; if
     omitted, defaults are sourced from the environment.
     """
-    repo = repo or get_repo()
+    repo = repo or get_repo(auth_token=trigger.auth_token)
     console = console or StdConsole()
     voice = voice or get_voice()
 

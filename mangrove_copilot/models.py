@@ -27,11 +27,21 @@ JourneyStatus = Literal["Pending", "Monitoring", "Resolved"]
 
 
 class TriggerPayload(BaseModel):
-    """Inbound parameters from the UI / Foundry trigger."""
+    """Inbound parameters from the UI / Foundry trigger.
+
+    `auth_token` is the end-user's bearer token (the same JWT their browser
+    holds after login). It is forwarded verbatim to the Mangrove API on every
+    call, so backend [Authorize] attributes naturally enforce ownership.
+    The token is per-conversation and may rotate between sessions.
+
+    `survey_id` aliases the backend's `entity_id` (workflow / asset / team
+    primary key in the `entity` table).
+    """
 
     survey_id: str = Field(alias="SurveyID")
     workspace_id: int = Field(alias="WorkspaceID")
     category: Category = Field(alias="Category")
+    auth_token: Optional[str] = Field(default=None, alias="AuthToken")
 
     model_config = {"populate_by_name": True}
 

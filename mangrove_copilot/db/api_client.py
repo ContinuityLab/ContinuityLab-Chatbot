@@ -12,7 +12,6 @@ catch the exception and fall back to the stub repo.
 """
 from __future__ import annotations
 
-import os
 from typing import Any
 
 import httpx
@@ -30,22 +29,34 @@ class MangroveApiError(RuntimeError):
 
 
 class ApiClientRepo:
+    """HTTP repo. Bearer token is supplied per-session (per user JWT).
+
+    The token is captured at construction so every request in a single
+    session uses the same identity — that's how the backend enforces
+    workspace ownership via its existing [Authorize] middleware.
+    """
+
     def __init__(
         self,
         base_url: str,
-        token_provider: "TokenProvider | None" = None,
+        auth_token: str,
         timeout: float = 10.0,
     ) -> None:
+        if not auth_token:
+            raise ValueError(
+                "ApiClientRepo requires a per-user auth_token; the engine "
+                "forwards the JWT supplied by the trigger payload."
+            )
         self._base_url = base_url.rstrip("/")
-        self._token_provider = token_provider or _default_token_provider()
+        self._auth_token = auth_token
         self._timeout = timeout
 
     def _headers(self) -> dict[str, str]:
-        token = self._token_provider()
-        headers = {"Accept": "application/json", "Content-Type": "application/json"}
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-        return headers
+        return {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self._auth_token}",
+        }
 
     def _request(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
         url = f"{self._base_url}{path}"
@@ -109,40 +120,6 @@ class ApiClientRepo:
 
 
 # ---- helpers ----
-
-TokenProvider = "callable[[], str | None]"
-
-
-def _default_token_provider():  # type: ignore[no-untyped-def]
-    """Returns a callable that yields a bearer token, or None.
-
-    Resolution order:
-    1. MANGROVE_API_TOKEN env var (static token).
-    2. DefaultAzureCredential scoped against MANGROVE_API_SCOPE (default: api://mangrove/.default).
-    3. None (anonymous).
-    """
-    static = os.environ.get("MANGROVE_API_TOKEN")
-    if static:
-        return lambda: static
-
-    scope = os.environ.get("MANGROVE_API_SCOPE")
-    if not scope:
-        return lambda: None
-
-    try:
-        from azure.identity import DefaultAzureCredential  # type: ignore
-    except ImportError:
-        return lambda: None
-
-    credential = DefaultAzureCredential()
-
-    def _get():  # type: ignore[no-untyped-def]
-        try:
-            return credential.get_token(scope).token
-        except Exception:  # pragma: no cover - defensive
-            return None
-
-    return _get
 
 
 def _survey_from_api(payload: dict[str, Any]) -> SurveyData:

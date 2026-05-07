@@ -19,6 +19,9 @@ def _read_trigger() -> TriggerPayload:
     survey_id = os.environ.get("SURVEY_ID")
     workspace_id = os.environ.get("WORKSPACE_ID")
     category = os.environ.get("CATEGORY")
+    # The user's JWT, forwarded by the Foundry "On Conversation Start"
+    # trigger from the frontend session. Per-conversation, never stored.
+    auth_token = os.environ.get("USER_TOKEN")
     missing = [
         name
         for name, value in (
@@ -40,6 +43,7 @@ def _read_trigger() -> TriggerPayload:
         SurveyID=survey_id,  # type: ignore[arg-type]
         WorkspaceID=workspace_id_int,
         Category=category,  # type: ignore[arg-type]
+        AuthToken=auth_token,
     )
 
 

@@ -65,11 +65,12 @@ The `run_agent.py` entrypoint is what Azure AI Foundry executes when a
 conversation starts. Foundry's "On Conversation Start" trigger should set the
 following environment variables from the UI parameters:
 
-| Env var          | Source (UI)        | Required |
-| ---------------- | ------------------ | -------- |
-| `SURVEY_ID`      | active survey row  | yes      |
-| `WORKSPACE_ID`   | active workspace   | yes      |
-| `CATEGORY`       | `Redundancy` or `Dependency` | yes |
+| Env var          | Source (UI)                              | Required |
+| ---------------- | ---------------------------------------- | -------- |
+| `SURVEY_ID`      | active survey / entity row id            | yes      |
+| `WORKSPACE_ID`   | active workspace                         | yes      |
+| `CATEGORY`       | `Redundancy` or `Dependency`             | yes      |
+| `USER_TOKEN`     | the user's JWT bearer token (per-session, forwarded by the frontend) | yes for live API |
 
 Plus the platform secrets:
 
@@ -79,9 +80,21 @@ Plus the platform secrets:
 | `FOUNDRY_AGENT_NAME`          | Registered agent name (e.g. `Decision-Tree-Redundancy`) |
 | `FOUNDRY_AGENT_VERSION`       | Agent version pin                           |
 | `MANGROVE_API_BASE`           | e.g. `https://mangrove-api.azurewebsites.net` |
-| `MANGROVE_API_TOKEN`          | bearer token for the Mangrove API (optional in Foundry — falls back to `DefaultAzureCredential`) |
 
-See `.env.example` for a copy-paste template.
+### Why the user's JWT, not a service token
+
+Mangrove's API enforces ownership through `[Authorize]` middleware that reads
+the `id` claim out of the JWT. Forwarding the same token the user's browser
+already holds means:
+
+- The backend's existing `[Authorize]` checks naturally reject access to
+  workspaces the user doesn't belong to.
+- We don't introduce a new trust relationship or service principal.
+- Tokens rotate automatically with the user's login session — no shared
+  secret to manage.
+
+The token never leaves the conversation: the engine forwards it on outbound
+calls and discards it when the session ends.
 
 ## Adding a new tree
 

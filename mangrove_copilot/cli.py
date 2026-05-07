@@ -18,12 +18,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--category", required=True, choices=["Redundancy", "Dependency"]
     )
+    parser.add_argument(
+        "--token",
+        default=None,
+        help="User bearer token. Without it, the engine uses the in-memory stub repo.",
+    )
     args = parser.parse_args(argv)
 
     trigger = TriggerPayload(
         SurveyID=args.survey_id,
         WorkspaceID=args.workspace_id,
         Category=args.category,
+        AuthToken=args.token,
     )
     session = run_session(trigger)
     print("\n--- Audit entry ---")
