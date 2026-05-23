@@ -271,12 +271,23 @@ def node_4_low_impact(session: Session) -> Optional[int]:
 
 def node_99_finalize(session: Session) -> Optional[int]:
     session.console.say("\n[Dependency Finalization]")
-    session.repo.update_dashboard_status(
-        session.trigger.survey_id,
-        session.trigger.workspace_id,
-        session.journey_status,
-    )
-    session.repo.write_audit_log(session.to_audit())
+
+    try:
+        session.repo.update_dashboard_status(
+            session.trigger.survey_id,
+            session.trigger.workspace_id,
+            session.journey_status,
+        )
+    except Exception as exc:
+        session.console.say(f"Warning: could not update dashboard: {exc}")
+        session.log("error", node=99, reason=str(exc))
+
+    try:
+        session.repo.write_audit_log(session.to_audit())
+    except Exception as exc:
+        session.console.say(f"Warning: could not write audit log: {exc}")
+        session.log("error", node=99, reason=str(exc))
+
     session.console.say(
         f"Audit log committed. Dashboard status: {session.journey_status}."
     )

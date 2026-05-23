@@ -43,10 +43,10 @@ def test_node2_monitor_path(repo):
 
 
 def test_node2_review_then_mitigate(repo):
-    # 1:Yes, 2:No, 2-choice:B, node3 proceed:Yes, node4 stakeholders:Yes, choose:B, node7:A, mitigate action
+    # 1:Yes, 2:No, 2-choice:B, node3 proceed:Yes, node4 stakeholders:Yes, choose:B, node7:A, mitigate choice:X, custom action
     session, _ = run_with_script(
         repo, survey_id="survey-001", workspace_id=12, category="Redundancy",
-        answers=["Yes", "No", "B", "Yes", "Yes", "B", "A", "Run quarterly disaster drill"],
+        answers=["Yes", "No", "B", "Yes", "Yes", "B", "A", "X", "Run quarterly disaster drill"],
     )
     assert visited(session) == [1, 2, 3, 4, 7, 8, 11]
     assert session.intervention is not None
@@ -56,10 +56,10 @@ def test_node2_review_then_mitigate(repo):
 
 
 def test_transfer_path(repo):
-    # 1:Yes, 2:No, B, node3:Yes, node4:Yes, B, node7:B, transfer plan
+    # 1:Yes, 2:No, B, node3:Yes, node4:Yes, B, node7:B, transfer choice:X, custom plan
     session, _ = run_with_script(
         repo, survey_id="survey-001", workspace_id=12, category="Redundancy",
-        answers=["Yes", "No", "B", "Yes", "Yes", "B", "B", "Cyber insurance via Acme"],
+        answers=["Yes", "No", "B", "Yes", "Yes", "B", "B", "X", "Cyber insurance via Acme"],
     )
     assert visited(session) == [1, 2, 3, 4, 7, 9, 11]
     assert session.intervention.strategy == "Transfer"
@@ -67,10 +67,10 @@ def test_transfer_path(repo):
 
 
 def test_avoid_complete_path(repo):
-    # 1:Yes, 2:No, B, node3:Yes, node4:Yes, B, node7:C, avoid plan, complete?:Yes
+    # 1:Yes, 2:No, B, node3:Yes, node4:Yes, B, node7:C, avoid choice:X, custom plan, target date, complete?:Yes
     session, _ = run_with_script(
         repo, survey_id="survey-001", workspace_id=12, category="Redundancy",
-        answers=["Yes", "No", "B", "Yes", "Yes", "B", "C", "Decommission server", "Yes"],
+        answers=["Yes", "No", "B", "Yes", "Yes", "B", "C", "X", "Decommission server", "2026-06-01", "Yes"],
     )
     assert visited(session) == [1, 2, 3, 4, 7, 10, 11]
     assert session.intervention.strategy == "Avoid"
@@ -78,12 +78,12 @@ def test_avoid_complete_path(repo):
 
 
 def test_avoid_incomplete_routes_to_monitor(repo):
-    # avoid plan + complete?:No -> node 5 -> 6 -> 11
+    # avoid choice:X + custom plan + target date + complete?:No -> node 5 -> 6 -> 11
     session, _ = run_with_script(
         repo, survey_id="survey-001", workspace_id=12, category="Redundancy",
         answers=[
             "Yes", "No", "B", "Yes", "Yes", "B",
-            "C", "Decommission server", "No",
+            "C", "X", "Decommission server", "2026-06-01", "No",
             "3", "", "",
         ],
     )
@@ -104,7 +104,7 @@ def test_accept_path_routes_to_monitor(repo):
 
 
 def test_node3_field_correction_loops_then_proceeds(repo):
-    # 1:Y, 2:No-Review(B), 3:No, pick field 1 (recovery_time), new value, then 3:Yes, 4:Yes, B (address), 7:A, mit action
+    # 1:Y, 2:No-Review(B), 3:No, pick field 1 (recovery_time), new value, then 3:Yes, 4:Yes, B (address), 7:A, mit choice:X, custom action
     session, _ = run_with_script(
         repo, survey_id="survey-001", workspace_id=12, category="Redundancy",
         answers=[
@@ -112,7 +112,7 @@ def test_node3_field_correction_loops_then_proceeds(repo):
             "No", "1", "12-18 Hrs",
             "Yes",
             "Yes", "B",
-            "A", "tweak backup playbook",
+            "A", "X", "tweak backup playbook",
         ],
     )
     nodes = visited(session)

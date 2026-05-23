@@ -299,6 +299,15 @@ def node_7_intervention_strategy(session: Session) -> Optional[int]:
 # ---------------------------------------------------------------------------
 
 
+_MITIGATE_ACTIONS = {
+    "A": "Schedule periodic access & credential reviews",
+    "B": "Add automated health-check or heartbeat monitoring",
+    "C": "Create a documented runbook for failover procedures",
+    "D": "Set up alerting for configuration drift or downtime",
+    "E": "Establish a regular backup verification schedule",
+}
+
+
 def node_8_mitigate(session: Session) -> Optional[int]:
     session.console.say("\n[Node 8: Mitigate Action Plan]")
     session.console.say(
@@ -309,11 +318,30 @@ def node_8_mitigate(session: Session) -> Optional[int]:
             "in place to keep it sharp?"
         )
     )
-    action = session.console.ask("Action item: ")
+    for key, label in _MITIGATE_ACTIONS.items():
+        session.console.say(f"  ({key}) {label}")
+    session.console.say("  (X) Other — describe your own")
+    choice = prompt_choice(
+        session.console,
+        "Your choice (A/B/C/D/E/X): ",
+        list(_MITIGATE_ACTIONS) + ["X"],
+    )
+    if choice == "X":
+        action = session.console.ask("Describe your mitigation check: ")
+    else:
+        action = _MITIGATE_ACTIONS[choice]
     session.intervention = InterventionPlan(strategy="Mitigate", action=action)
     session.journey_status = "Resolved"
     session.log("intervention", strategy="Mitigate", action=action)
     return 11
+
+
+_TRANSFER_ACTIONS = {
+    "A": "Purchase insurance coverage",
+    "B": "Upgrade to premium SLA tier",
+    "C": "Outsource to managed service provider",
+    "D": "Contract a third-party DR partner",
+}
 
 
 def node_9_transfer(session: Session) -> Optional[int]:
@@ -325,11 +353,30 @@ def node_9_transfer(session: Session) -> Optional[int]:
             "Who is better positioned to absorb this risk?"
         )
     )
-    action = session.console.ask("Transfer plan (entity / method): ")
+    for key, label in _TRANSFER_ACTIONS.items():
+        session.console.say(f"  ({key}) {label}")
+    session.console.say("  (X) Other — describe your own")
+    choice = prompt_choice(
+        session.console,
+        "Your choice (A/B/C/D/X): ",
+        list(_TRANSFER_ACTIONS) + ["X"],
+    )
+    if choice == "X":
+        action = session.console.ask("Describe your risk transfer plan: ")
+    else:
+        action = _TRANSFER_ACTIONS[choice]
     session.intervention = InterventionPlan(strategy="Transfer", action=action)
     session.journey_status = "Resolved"
     session.log("intervention", strategy="Transfer", action=action)
     return 11
+
+
+_AVOID_PLANS = {
+    "A": "Gradual phase-out with migration to alternative",
+    "B": "Immediate shutdown and removal",
+    "C": "Consolidate into another existing resource",
+    "D": "Archive and disable access",
+}
 
 
 def node_10_avoid(session: Session) -> Optional[int]:
@@ -337,10 +384,25 @@ def node_10_avoid(session: Session) -> Optional[int]:
     session.console.say(
         session.voice.say(
             "Decommissioning permanently retires the asset, workflow, or team. "
-            "Confirm the action plan and whether decommissioning is complete."
+            "Which approach fits best?"
         )
     )
-    plan = session.console.ask("Decommissioning plan + target date: ")
+    for key, label in _AVOID_PLANS.items():
+        session.console.say(f"  ({key}) {label}")
+    session.console.say("  (X) Other — describe your own")
+    choice = prompt_choice(
+        session.console,
+        "Your choice (A/B/C/D/X): ",
+        list(_AVOID_PLANS) + ["X"],
+    )
+    if choice == "X":
+        plan = session.console.ask("Describe your decommissioning plan: ")
+    else:
+        plan = _AVOID_PLANS[choice]
+
+    target_date = session.console.ask("Target completion date: ")
+    plan = f"{plan} — target: {target_date}"
+
     complete = prompt_yes_no(
         session.console, "Is decommissioning 100% complete now? (Yes/No): "
     )
@@ -364,21 +426,54 @@ def node_10_avoid(session: Session) -> Optional[int]:
 # ---------------------------------------------------------------------------
 
 
+def _build_audit_comment(session: Session) -> Optional[str]:
+    parts: list[str] = []
+    if session.intervention:
+        parts.append(f"Strategy: {session.intervention.strategy}")
+        if session.intervention.action:
+            parts.append(session.intervention.action)
+    if session.monitoring:
+        parts.append(
+            f"Monitoring: {session.monitoring.review_interval} "
+            f"(owner: {session.monitoring.owner})"
+        )
+        if session.monitoring.notes:
+            parts.append(f"Notes: {session.monitoring.notes}")
+    return " | ".join(parts) if parts else None
+
+
 def node_11_archive(session: Session) -> Optional[int]:
     session.console.say("\n[Node 11: Archive]")
     if session.journey_status == "Pending":
         # straight Yes-link path treats the redundancy as resolved
         session.journey_status = "Resolved"
-    session.repo.update_dashboard_status(
-        session.trigger.survey_id,
-        session.trigger.workspace_id,
-        session.journey_status,
-    )
+
+    try:
+        session.repo.update_dashboard_status(
+            session.trigger.survey_id,
+            session.trigger.workspace_id,
+            session.journey_status,
+        )
+    except Exception as exc:
+        session.console.say(f"Warning: could not update dashboard: {exc}")
+        session.log("error", node=11, reason=str(exc))
+
     audit = session.to_audit()
-    session.repo.write_audit_log(audit)
+    audit_comment = _build_audit_comment(session)
+    if audit_comment:
+        session.log("audit_comment", comment=audit_comment)
+
+    try:
+        session.repo.write_audit_log(audit)
+    except Exception as exc:
+        session.console.say(f"Warning: could not write audit log: {exc}")
+        session.log("error", node=11, reason=str(exc))
+
     session.console.say(
         f"Audit log committed. Investor dashboard status: {session.journey_status}."
     )
+    if audit_comment:
+        session.console.say(f"Summary: {audit_comment}")
     session.console.say("--- Session complete ---")
     return None
 

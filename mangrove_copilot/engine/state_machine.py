@@ -56,11 +56,17 @@ class Session:
 Node = Callable[[Session], Optional[int]]
 
 
-def run_tree(session: Session, nodes: dict[int, Node], start: int = 1) -> Session:
+def run_tree(session: Session, nodes: dict[int, Node], start: int = 1, max_hops: int = 50) -> Session:
     current: Optional[int] = start
-    while current is not None:
+    for _ in range(max_hops):
+        if current is None:
+            break
         if current not in nodes:
             raise RuntimeError(f"Decision tree has no handler for node {current}")
         session.log("enter_node", node=current)
         current = nodes[current](session)
+    else:
+        raise RuntimeError(
+            f"Decision tree exceeded {max_hops} hops — possible infinite loop"
+        )
     return session
