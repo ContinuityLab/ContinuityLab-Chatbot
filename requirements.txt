@@ -1,4 +1,8 @@
-ansible-core==2.19.7
 azure-ai-projects==2.0.0
 azure-identity==1.25.0
 openai==2.8.0
+httpx==0.28.1
+pydantic==2.9.2
+
+# dev/test
+pytest==8.3.3

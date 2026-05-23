@@ -57,6 +57,7 @@ venv/
 ENV/
 .venv/
 .env*
+!.env.example
 ## PyInstaller
 *.spec
 dist/
