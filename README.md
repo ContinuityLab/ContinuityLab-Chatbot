@@ -26,21 +26,22 @@ mangrove_copilot/
 ├── __init__.py              # exports run_session()
 ├── models.py                # Pydantic payloads (TriggerPayload, SurveyData, …)
 ├── scoring.py               # calculate_resilience_score() — single source of truth
+├── session.py               # top-level session orchestration
 ├── agent.py                 # Azure AI Foundry voice wrapper
+├── console.py               # Console protocol + ScriptedConsole for tests
 ├── db/
 │   ├── base.py              # MangroveRepo Protocol
 │   ├── api_client.py        # real HTTP client → mangrove-api.azurewebsites.net
 │   ├── stub.py              # in-memory fallback for offline / CI runs
 │   └── factory.py           # picks repo impl based on env
 ├── engine/
-│   ├── state_machine.py     # generic node-driven engine
+│   ├── state_machine.py     # generic node-driven engine (max 50 hops safety guard)
 │   ├── redundancy_tree.py   # Nodes 1–11 (full redundancy spec)
-│   ├── dependency_tree.py   # Nodes 1–4 (dependency spec, with high/low paths)
+│   ├── dependency_tree.py   # Nodes 1–4 + 99 (dependency spec, with high/low paths)
 │   └── router.py            # picks tree from Category
-├── cli.py                   # local manual driver (python -m mangrove_copilot)
-└── prompts.py               # canonical prompt strings
+└── cli.py                   # local manual driver (python -m mangrove_copilot)
 run_agent.py                 # Azure AI Foundry entry point
-tests/                       # pytest suite
+tests/                       # pytest suite (32 tests)
 ```
 
 ## Running locally
@@ -108,5 +109,7 @@ calls and discards it when the session ends.
 
 - Mangrove API authentication mode (bearer vs managed identity) needs to be
   confirmed with the API owner. The current client supports both.
-- Action plan templates for Nodes 8/9 (Mitigate / Transfer) are free-text
-  today; structured form fields are a planned follow-up.
+- Owner picker (select from RACI stakeholders or workspace members) is
+  implemented in the C# production backend but not yet ported to this engine.
+- The scoring function lives here but the production backend reads a
+  pre-calculated `resilience_score` from the DB — these should be reconciled.
